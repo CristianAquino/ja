@@ -1,9 +1,97 @@
-import { useState, Fragment } from "react";
+import { useState, useEffect, Fragment } from "react";
 import { BiPlusCircle, BiSolidTrash } from "react-icons/bi";
+import axios from "../../axios/axiosInstance";
 
 export default function AsignatureComponent() {
   const [ciclo, setCiclo] = useState("");
-  const [malla, setMalla] = useState("");
+  const [planArray, setPlanArray] = useState([]);
+  const [coursesArray, setCoursesArray] = useState([]);
+  const [schedulesArray, setSchedulesArray] = useState([]);
+  const [groupSchedule, setGroupSchedule] = useState([]);
+  const [selectedHours, setSelectedHours] = useState({
+    indexes: [],
+    labels: [],
+  });
+  const [groupData, setGroupData] = useState({
+    planID: "invalid",
+    semesterID: "invalid",
+    courseID: "invalid",
+    limit: "invalid",
+    groupNumber: "0",
+    groupSchedule: [],
+  });
+
+  const getCourses = async () => {
+    const url = `/api/Course/Search?studyPlanId=${groupData.planID}&semester=${groupData.semesterID}`;
+
+    try {
+      const response = await axios.get(url);
+      setCoursesArray(response.data);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  const getGroupNumber = async (courseGetId) => {
+    const url = `/api/Group/NextGroupNumber/${courseGetId}`;
+
+    try {
+      const response = await axios.get(url);
+      setGroupData((prevState) => ({
+        ...prevState,
+        groupNumber: response.data,
+      }));
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  const getPlans = async () => {
+    try {
+      const response = await axios.get("/api/StudyPlan/All");
+      setPlanArray(response.data);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  const clearScreen = () => {
+    setGroupSchedule([]);
+    setSchedulesArray([]);
+    setSelectedHours([]);
+  };
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setGroupData((prevState) => ({
+      ...prevState,
+      [name]: value,
+    }));
+
+    if (name === "courseID" && value !== "invalid") {
+      getGroupNumber(value).then(() => {
+        console.log("Grupo recibido...");
+      });
+
+      clearScreen();
+    }
+
+    if (name === "semesterID" || name === "planID") {
+      getGroupNumber(value).then(() => {
+        console.log("Grupo recibido...");
+      });
+
+      clearScreen();
+      setGroupData((prevState) => ({
+        ...prevState,
+        courseID: "invalid",
+        limit: 0,
+        groupNumber: 0,
+        groupSchedule: [],
+      }));
+    }
+  };
+
   const [asignaturas, setAsignaturas] = useState([
     {
       curso: "Programacion y computacion",
@@ -41,9 +129,20 @@ export default function AsignatureComponent() {
     setCiclo(e.target.value);
   };
 
-  const handleMallaChange = (e) => {
-    setMalla(e.target.value);
-  };
+  useEffect(() => {
+    getPlans().then(() => {
+      console.log("Planes recibidos...");
+    });
+  }, []);
+
+  useEffect(() => {
+    if (groupData.planID === "invalid" || groupData.semesterID === "invalid")
+      return;
+    getCourses().then(() => {
+      console.log("Cursos obtenidos...");
+    });
+  }, [groupData.planID, groupData.semesterID]);
+
   return (
     <div
       style={{
@@ -63,20 +162,38 @@ export default function AsignatureComponent() {
         }}
       >
         <label>
-          Ciclo:
-          <select name="ciclo" onChange={handleCicloChange}>
-            <option value="0">---Seleccione un ciclo--</option>
-            <option value="1">I</option>
-            <option value="2">II</option>
-            <option value="3">III</option>
+          Plan de Estudios:
+          <select
+            name={"planID"}
+            onChange={handleChange}
+            value={groupData.planID}
+          >
+            <option value={"invalid"}>-- Seleccione un plan --</option>
+            {planArray.map((plan) => (
+              <option key={plan.id} value={plan.id}>
+                {plan.code}
+              </option>
+            ))}
           </select>
         </label>
         <label>
-          Malla:
-          <select name="malla" onChange={handleMallaChange}>
-            <option value="0">---Seleccione malla--</option>
-            <option value="1">2015</option>
-            <option value="2">2018</option>
+          Semestre:
+          <select
+            name={"semesterID"}
+            onChange={handleChange}
+            value={groupData.semesterID}
+          >
+            <option value={"invalid"}>-- Seleccione un ciclo --</option>
+            <option value={1}>Ciclo I</option>
+            <option value={2}>Ciclo II</option>
+            <option value={3}>Ciclo III</option>
+            <option value={4}>Ciclo IV</option>
+            <option value={5}>Ciclo V</option>
+            <option value={6}>Ciclo VI</option>
+            <option value={7}>Ciclo VII</option>
+            <option value={8}>Ciclo VIII</option>
+            <option value={9}>Ciclo IX</option>
+            <option value={10}>Ciclo X</option>
           </select>
         </label>
       </div>
@@ -89,7 +206,12 @@ export default function AsignatureComponent() {
             <th>Acciones</th>
           </tr>
         </thead>
-        {asignaturas.map((asignatura) => (
+        {coursesArray.map((course) => (
+          <tr key={course.id}>
+            <td>{course.name}</td>
+          </tr>
+        ))}
+        {/*asignaturas.map((asignatura) => (
           <Fragment>
             <tr>
               <td rowSpan={asignatura.horarios.length + 2}>
@@ -115,7 +237,7 @@ export default function AsignatureComponent() {
               </td>
             </tr>
           </Fragment>
-        ))}
+        ))*/}
         {/* {asignaturas.map((asignatura) => (
             <Fragment>
               <td>1</td>
